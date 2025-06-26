@@ -1,0 +1,229 @@
+---
+import "../styles/global.css";
+
+const session = Astro.cookies.get("session")?.value;
+let user = null;
+
+try {
+    user = session ? JSON.parse(session) : null;
+} catch {}
+---
+
+<html lang="es">
+    <head>
+        <title>{Astro.props.title ?? "RadioBobba"}</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/x-icon" href="favicon.svg" />
+    </head>
+
+    <body>
+        <div
+            class="min-h-dvh bg-gradient-to-b from-[#730505] to-black flex flex-col"
+        >
+            <!-- NAV -->
+            <header class="p-4 text-white flex justify-between items-center">
+                <h1 class="font-bold text-[20px] ml-5">RadioBobba</h1>
+                <nav>
+                    <ul class="flex gap-4">
+                        <li><a href="/" class="hover:underline">Inicio</a></li>
+                        <li>
+                            <a href="/equipo" class="hover:underline">Equipo</a>
+                        </li>
+                        {
+                            !user && (
+                                <li>
+                                    <a href="/login" class="hover:underline">
+                                        Login
+                                    </a>
+                                </li>
+                            )
+                        }
+                        {
+                            user && (
+                                <li>
+                                    <a href="/panel" class="hover:underline">
+                                        Panel
+                                    </a>
+                                </li>
+                            )
+                        }
+                    </ul>
+                </nav>
+
+                {
+                    user && (
+                        <div class="flex items-center gap-2">
+                            <img
+                                src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+                                alt="avatar"
+                                width="35"
+                                height="35"
+                                class="rounded-full"
+                                draggable="false"
+                            />
+                            <span class="text-sm">{user.username}</span>
+                        </div>
+                    )
+                }
+            </header>
+
+            <!-- STREAM INFO -->
+            <div class="flex justify-between ml-[50px] mr-[50px]">
+                <div>
+                    <h1 class="font-normal text-white text-[14px] opacity-75">
+                        Listening Party
+                    </h1>
+                    <h3 class="font-bold text-white text-[35px]" id="djName">
+                    </h3>
+                </div>
+
+                <div class="flex justify-center items-center">
+                    <div
+                        class="relative inline-flex items-center justify-center bg-red-500 py-[5px] px-[8px] rounded-xl"
+                    >
+                        <div class="inline-flex items-center space-x-2">
+                            <!-- Puntico con animación sutil -->
+                            <span class="relative flex h-3 w-3">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"
+                                ></span>
+                                <span
+                                    class="relative inline-flex rounded-full h-3 w-3 bg-white"
+                                ></span>
+                            </span>
+
+                            <!-- Texto -->
+                            <span
+                                class="text-white font-semibold text-sm uppercase"
+                                >En Vivo
+                            </span>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-[#8080807a] text-white rounded-xl uppercase font-semibold text-[13px] py-[5px] px-[8px] flex items-center justify-center ml-2"
+                    >
+                        <svg
+                            class="w-[16px] h-[16px] text-gray-800 dark:text-white"
+                            aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke="currentColor"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M20 16v-4a8 8 0 1 0-16 0v4m16 0v2a2 2 0 0 1-2 2h-2v-6h2a2 2 0 0 1 2 2ZM4 16v2a2 2 0 0 0 2 2h2v-6H6a2 2 0 0 0-2 2Z"
+                            ></path>
+                        </svg>
+                        <span class="ml-2" id="listenerCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -->
+            <main class="flex-1 overflow-y-auto">
+                <slot />
+            </main>
+
+            <!-- PLAYER -->
+            <div
+                class="sticky bottom-0 z-50 bg-[#980000] rounded-xl ml-[65px] mr-[50px] mb-[25px] p-4 flex items-center justify-between text-white gap-4"
+            >
+                <button id="playPauseBtn" class="text-2xl">⏸️</button>
+                <input
+                    id="volumeSlider"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    class="w-40 accent-red-500"
+                />
+                <audio id="radioPlayer">
+                    <source src="https://server2.ejeserver.com:7012/stream" />
+                </audio>
+            </div>
+
+            <!-- SCRIPT -->
+            <script>
+                const player = document.getElementById(
+                    "radioPlayer",
+                ) as HTMLAudioElement;
+                const volumeSlider = document.getElementById(
+                    "volumeSlider",
+                ) as HTMLInputElement;
+                const playPauseBtn = document.getElementById("playPauseBtn");
+
+                // 🎯 Usar 'volume' como key en localStorage
+                const savedVolume = localStorage.getItem("volume");
+                if (savedVolume !== null) {
+                    player.volume = parseFloat(savedVolume);
+                    volumeSlider.value = savedVolume;
+                } else {
+                    player.volume = 0.5;
+                    volumeSlider.value = "0.5";
+                }
+
+                // ▶️ Autoplay
+                player.play().catch(() => {
+                    if (playPauseBtn) {
+                        playPauseBtn.textContent = "▶️";
+                    }
+                });
+
+                // Play/Pause manual
+                if (playPauseBtn) {
+                    playPauseBtn.addEventListener("click", () => {
+                        if (player.paused) {
+                            player.play();
+                            playPauseBtn.textContent = "⏸️";
+                        } else {
+                            player.pause();
+                            playPauseBtn.textContent = "▶️";
+                        }
+                    });
+                }
+
+                // Guardar volumen
+                volumeSlider.addEventListener("input", () => {
+                    player.volume = parseFloat(volumeSlider.value);
+                    localStorage.setItem("volume", volumeSlider.value);
+                });
+
+                // 🔁 Stream info con anti-cache
+                async function fetchStreamInfo() {
+                    try {
+                        const url = `https://server2.ejeserver.com:2199/rpc/radiobob/streaminfo.get?t=${Date.now()}`;
+                        const res = await fetch(url, {
+                            cache: "no-store", // Evita guardar el caché en la petición
+                        });
+                        const json = await res.json();
+                        const data = json?.data?.[0];
+
+                        if (data) {
+                            document.getElementById(
+                                "listenerCount",
+                            )!.textContent = data.listeners ?? 0;
+                            if (data.title === "Radiobobba Stream") {
+                                return (document.getElementById(
+                                    "djName",
+                                )!.textContent = "Auto DJ");
+                            }
+                            document.getElementById("djName")!.textContent =
+                                data.track?.title || "Auto DJ";
+                        }
+                    } catch (err) {
+                        console.error("Error al obtener info del stream:", err);
+                    }
+                }
+
+                fetchStreamInfo(); // carga inicial
+                setInterval(fetchStreamInfo, 20000); // cada 20s
+            </script>
+        </div>
+    </body>
+</html>

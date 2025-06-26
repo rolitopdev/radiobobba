@@ -1,0 +1,26 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Procesando login...">
+    <h1>Iniciando sesión...</h1>
+    <script>
+        const code = new URLSearchParams(window.location.search).get("code");
+
+        if (!code) {
+            alert("No se encontró código");
+            window.location.href = "/login";
+        } else {
+            fetch("/api/auth/exchange", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code }),
+            })
+                .then(() => (window.location.href = "/panel"))
+                .catch((err) => {
+                    alert("Error");
+                    console.error(err);
+                });
+        }
+    </script>
+</BaseLayout>

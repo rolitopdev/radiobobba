@@ -1,0 +1,37 @@
+---
+export const prerender = false;
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const sessionCookie = Astro.cookies.get("session")?.value;
+let user = null;
+
+try {
+  user = sessionCookie ? JSON.parse(sessionCookie) : null;
+} catch {
+  throw Astro.redirect("/login");
+}
+---
+
+<BaseLayout title="RadioBobba - Panel de Usuario">
+  {
+    user ? (
+      <>
+        <h1>Bienvenido, {user.username}!</h1>
+        {/* <img
+          src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+          alt="Avatar"
+          width="100"
+        />
+        <p>Tu ID: {user.id}</p> */}
+        <form method="POST" action="/api/auth/logout">
+          <button type="submit">Cerrar sesión</button>
+        </form>
+      </>
+    ) : (
+      <>
+        <h1>No has iniciado sesión</h1>
+        <a href="/login">Inicia sesión</a>
+      </>
+    )
+  }
+</BaseLayout>
